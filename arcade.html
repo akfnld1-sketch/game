@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🕹️ 모바일 오락실</title>
+<style>
+/* ===== Google Fonts ===== */
+@import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Noto+Sans+KR:wght@400;700;900&display=swap');
+
+/* ===== CSS 변수 ===== */
+:root {
+  --bg: #080810;
+  --panel: #10101e;
+  --card: #14142a;
+  --border: #2a2a4a;
+  --text: #e8e8ff;
+  --dim: #5a5a88;
+  --accent: #ffd700;
+  --cyan: #00e5ff;
+  --green: #00ff88;
+  --red: #ff2244;
+  --purple: #cc44ff;
+  --orange: #ff8800;
+}
+
+/* ===== 기본 리셋 ===== */
+* { margin:0; padding:0; box-sizing:border-box; touch-action:manipulation; }
+html, body {
+  width:100%; height:100%; overflow:hidden;
+  background:var(--bg); color:var(--text);
+  font-family:'Noto Sans KR', sans-serif;
+  user-select:none; -webkit-user-select:none;
+}
+
+/* ===== 전역 애니메이션 ===== */
+@keyframes glow-pulse { 0%,100%{opacity:0.6} 50%{opacity:1} }
+@keyframes slide-up { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
+@keyframes shake { 0%,100%{transform:translate(0)} 25%{transform:translate(-5px,3px)} 75%{transform:translate(5px,-3px)} }
+@keyframes float-up { 0%{transform:translateY(0);opacity:1} 100%{transform:translateY(-50px);opacity:0} }
+@keyframes star-spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+@keyframes title-flicker {
+  0%,90%,100%{opacity:1} 91%{opacity:0.4} 93%{opacity:1} 95%{opacity:0.3} 97%{opacity:1}
+}
+@keyframes scanline {
+  0%{top:-10%} 100%{top:110%}
+}
+@keyframes neon-border {
+  0%,100%{box-shadow:0 0 8px var(--accent),inset 0 0 8px rgba(255,215,0,0.05)}
+  50%{box-shadow:0 0 20px var(--accent),inset 0 0 16px rgba(255,215,0,0.1)}
+}
+
+/* ===== 스캔라인 효과 ===== */
+body::before {
+  content:'';
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  background:repeating-linear-gradient(
+    0deg, transparent, transparent 3px,
+    rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px
+  );
+  pointer-events:none; z-index:9999;
+}
+body::after {
+  content:'';
+  position:fixed; left:0; right:0; height:3px;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  animation:scanline 4s linear infinite;
+  pointer-events:none; z-index:9998;
+}
+
+/* ===== 화면 전환 공통 ===== */
+.screen {
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  display:none; flex-direction:column; align-items:center;
+  overflow:hidden;
+}
+.screen.active { display:flex; }
+
+/* ===== 메인 허브 ===== */
+#hub {
+  background: radial-gradient(ellipse at 50% 0%, #1a0a30 0%, var(--bg) 70%);
+  overflow-y:auto;
+  padding-bottom:20px;
+}
+
+/* 상단 타이틀 영역 */
+.hub-header {
+  width:100%; padding:30px 20px 16px;
+  text-align:center; position:relative;
+}
+.hub-logo {
+  font-family:'Black Ops One'; font-size:42px; letter-spacing:4px;
+  background:linear-gradient(135deg, #ffd700, #ff8800, #ff2244);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  animation:title-flicker 6s infinite;
+  line-height:1;
+}
+.hub-sub {
+  font-size:11px; letter-spacing:6px; color:var(--dim);
+  margin-top:6px; text-transform:uppercase;
+}
+.hub-coin {
+  margin-top:12px;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  font-family:'Black Ops One'; font-size:16px; color:var(--accent);
+}
+.hub-coin span { font-size:22px; animation:star-spin 3s linear infinite; }
+
+/* 게임 그리드 */
+.game-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  padding:0 14px;
+  width:100%; max-width:460px;
+}
+
+/* 게임 카드 */
+.game-card {
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:18px 12px 14px;
+  cursor:pointer;
+  position:relative; overflow:hidden;
+  transition:transform 0.15s, box-shadow 0.15s;
+  text-align:center;
+  animation:slide-up 0.4s ease both;
+}
+.game-card:active { transform:scale(0.94); }
+.game-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+}
+/* 카드별 컬러 */
+.card-tetris   { border-color:#ff224433; }
+.card-snake    { border-color:#00ff8833; }
+.card-brick    { border-color:#ff880033; }
+.card-gostop   { border-color:#ff226633; }
+.card-billiard { border-color:#00e5ff33; }
+.card-bowling  { border-color:#cc44ff33; }
+.card-tank     { border-color:#88ff0033; }
+
+.card-tetris:active   { box-shadow:0 0 20px rgba(255,34,68,0.4); }
+.card-snake:active    { box-shadow:0 0 20px rgba(0,255,136,0.4); }
+.card-brick:active    { box-shadow:0 0 20px rgba(255,136,0,0.4); }
+.card-gostop:active   { box-shadow:0 0 20px rgba(255,34,100,0.4); }
+.card-billiard:active { box-shadow:0 0 20px rgba(0,229,255,0.4); }
+.card-bowling:active  { box-shadow:0 0 20px rgba(204,68,255,0.4); }
+.card-tank:active     { box-shadow:0 0 20px rgba(136,255,0,0.4); }
+
+.card-icon { font-size:40px; display:block; margin-bottom:8px; line-height:1; }
+.card-name {
+  font-family:'Black Ops One'; font-size:14px; letter-spacing:1px;
+  margin-bottom:3px;
+}
+.card-tetris   .card-name { color:var(--red); }
+.card-snake    .card-name { color:var(--green); }
+.card-brick    .card-name { color:var(--orange); }
+.card-gostop   .card-name { color:#ff6688; }
+.card-billiard .card-name { color:var(--cyan); }
+.card-bowling  .card-name { color:var(--purple); }
+.card-tank     .card-name { color:#aaff00; }
+
+.card-desc { font-size:10px; color:var(--dim); line-height:1.4; }
+.card-badge {
+  position:absolute; top:8px; right:8px;
+  font-size:8px; letter-spacing:1px; padding:2px 6px;
+  border-radius:10px; font-weight:700;
+}
+.badge-hot { background:rgba(255,34,68,0.2); color:var(--red); border:1px solid var(--red); }
+.badge-new { background:rgba(0,229,255,0.2); color:var(--cyan); border:1px solid var(--cyan); }
+
+/* 총 점수 */
+.hub-scores {
+  width:100%; max-width:460px;
+  padding:12px 14px 0;
+  display:grid; grid-template-columns:repeat(4,1fr); gap:6px;
+}
+.score-chip {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:10px; padding:6px 4px;
+  text-align:center;
+}
+.score-chip .s-name { font-size:8px; color:var(--dim); letter-spacing:1px; }
+.score-chip .s-val  { font-family:'Black Ops One'; font-size:13px; color:var(--accent); }
+
+/* ===== 게임 공통 화면 ===== */
+#game-screen {
+  background:var(--bg);
+  flex-direction:column;
+}
+
+/* 상단 게임 바 */
+#game-bar {
+  width:100%; padding:8px 12px 6px;
+  display:flex; align-items:center; justify-content:space-between;
+  background:linear-gradient(180deg, rgba(10,10,20,0.95) 0%, transparent 100%);
+  position:relative; z-index:10; flex-shrink:0;
+}
+#btn-back {
+  background:rgba(255,255,255,0.05); border:1px solid var(--border);
+  border-radius:8px; padding:6px 12px; font-size:12px; color:var(--dim);
+  cursor:pointer; font-family:'Noto Sans KR'; letter-spacing:1px;
+}
+#btn-back:active { background:rgba(255,255,255,0.1); }
+#game-title { font-family:'Black Ops One'; font-size:16px; letter-spacing:2px; }
+#game-score-bar {
+  font-family:'Black Ops One'; font-size:14px; color:var(--accent);
+  text-align:right;
+}
+
+/* 게임 캔버스 컨테이너 */
+#canvas-container {
+  flex:1; width:100%;
+  display:flex; align-items:center; justify-content:center;
+  position:relative; overflow:hidden;
+}
+#canvas-container canvas {
+  display:block; max-width:100%; max-height:100%;
+}
+
+/* 이펙트 레이어 */
+#fx-layer {
+  position:absolute; top:0; left:0; right:0; bottom:0;
+  pointer-events:none; z-index:50;
+  opacity:0; transition:opacity 0.2s;
+}
+#float-layer {
+  position:absolute; top:0; left:0; right:0; bottom:0;
+  pointer-events:none; z-index:55; overflow:hidden;
+}
+.float-txt {
+  position:absolute;
+  font-family:'Black Ops One'; font-size:16px;
+  animation:float-up 1s ease-out forwards;
+  text-shadow:0 0 8px currentColor;
+  white-space:nowrap;
+}
+
+/* ===== 컨트롤 패드 공통 ===== */
+#ctrl-pad {
+  width:100%; flex-shrink:0;
+  background:linear-gradient(0deg, rgba(8,8,16,0.98) 0%, transparent 100%);
+}
+
+/* D패드 (테트리스, 스네이크, 탱크 등) */
+.dpad-wrap {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  grid-template-rows:repeat(3,1fr);
+  gap:5px; padding:8px;
+  width:160px; margin:0 auto;
+}
+.dpad-btn {
+  height:46px; border:none; border-radius:10px;
+  background:linear-gradient(135deg,#1a1a30,#0d0d1e);
+  border:1px solid var(--border);
+  color:var(--text); font-size:18px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:transform 0.08s;
+}
+.dpad-btn:active { transform:scale(0.88); background:rgba(255,255,255,0.08); }
+.dpad-center { grid-column:2; grid-row:2; }
+.dpad-up    { grid-column:2; grid-row:1; }
+.dpad-down  { grid-column:2; grid-row:3; }
+.dpad-left  { grid-column:1; grid-row:2; }
+.dpad-right { grid-column:3; grid-row:2; }
+
+/* 행동 버튼 */
+.action-row {
+  display:flex; gap:8px; padding:0 12px 10px; justify-content:center;
+}
+.act-btn {
+  flex:1; max-width:140px; height:50px;
+  border:none; border-radius:12px;
+  font-family:'Black Ops One'; font-size:14px; letter-spacing:1px;
+  cursor:pointer; transition:transform 0.08s;
+  color:white;
+}
+.act-btn:active { transform:scale(0.92); }
+.act-red    { background:linear-gradient(135deg,#cc1133,#880022); box-shadow:0 4px 12px rgba(200,0,50,0.3); }
+.act-blue   { background:linear-gradient(135deg,#1133cc,#002288); box-shadow:0 4px 12px rgba(0,50,200,0.3); }
+.act-green  { background:linear-gradient(135deg,#119944,#006622); box-shadow:0 4px 12px rgba(0,150,60,0.3); }
+.act-yellow { background:linear-gradient(135deg,#aa7700,#665500); box-shadow:0 4px 12px rgba(180,120,0,0.3); color:var(--accent); }
+.act-wide   { max-width:none; }
+
+/* ===== 오버레이 (게임오버/일시정지) ===== */
+#overlay {
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,0.9); z-index:800;
+  display:none; flex-direction:column;
+  align-items:center; justify-content:center; padding:20px;
+}
+#overlay.show { display:flex; }
+.ov-title { font-family:'Black Ops One'; font-size:36px; letter-spacing:3px; margin-bottom:6px; }
+.ov-sub   { font-size:13px; color:var(--dim); margin-bottom:24px; letter-spacing:2px; }
+.ov-stats {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:14px; padding:16px 24px;
+  width:100%; max-width:280px; margin-bottom:20px;
+}
+.ov-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:7px 0; border-bottom:1px solid var(--border);
+}
+.ov-row:last-child { border:none; }
+.ov-label { font-size:12px; color:var(--dim); letter-spacing:1px; }
+.ov-value { font-family:'Black Ops One'; font-size:16px; }
+.ov-btn {
+  width:100%; max-width:280px; height:50px; border:none; border-radius:12px;
+  font-family:'Black Ops One'; font-size:16px; letter-spacing:2px;
+  cursor:pointer; margin-bottom:10px; transition:transform 0.1s;
+  color:white;
+}
+.ov-btn:active { transform:scale(0.95); }
+.ov-btn-play    { background:linear-gradient(135deg,#ff6600,#cc2200); box-shadow:0 0 20px rgba(255,80,0,0.4); }
+.ov-btn-menu    { background:var(--panel); border:1px solid var(--border); color:var(--dim); }
+</style>
+</head>
+<body>
+
+<!-- ==================== 메인 허브 ==================== -->
+<div id="hub" class="screen active">
+  <div class="hub-header">
+    <div class="hub-logo">오락실</div>
+    <div class="hub-sub">MOBILE ARCADE · 7 GAMES</div>
+    <div class="hub-coin"><span>★</span> BEST SCORES <span>★</span></div>
+  </div>
+
+  <!-- 최고 점수 칩 -->
+  <div class="hub-scores">
+    <div class="score-chip"><div class="s-name">테트리스</div><div class="s-val" id="hs-tetris">0</div></div>
+    <div class="score-chip"><div class="s-name">스네이크</div><div class="s-val" id="hs-snake">0</div></div>
+    <div class="score-chip"><div class="s-name">벽돌깨기</div><div class="s-val" id="hs-brick">0</div></div>
+    <div class="score-chip"><div class="s-name">탱크</div><div class="s-val" id="hs-tank">0</div></div>
+  </div>
+
+  <!-- 게임 카드 그리드 -->
+  <div class="game-grid" style="margin-top:14px">
+
+    <div class="game-card card-tetris" onclick="launchGame('tetris')" style="animation-delay:0s">
+      <span class="card-badge badge-hot">HOT</span>
+      <span class="card-icon">🟥</span>
+      <div class="card-name">테트리스</div>
+      <div class="card-desc">블록 쌓기<br>고전의 왕</div>
+    </div>
+
+    <div class="game-card card-snake" onclick="launchGame('snake')" style="animation-delay:0.05s">
+      <span class="card-icon">🐍</span>
+      <div class="card-name">스네이크</div>
+      <div class="card-desc">먹이 먹고<br>몸을 키워라</div>
+    </div>
+
+    <div class="game-card card-brick" onclick="launchGame('brick')" style="animation-delay:0.1s">
+      <span class="card-icon">🧱</span>
+      <div class="card-name">벽돌깨기</div>
+      <div class="card-desc">공을 튕겨<br>모두 부숴라</div>
+    </div>
+
+    <div class="game-card card-gostop" onclick="launchGame('gostop')" style="animation-delay:0.15s">
+      <span class="card-badge badge-new">NEW</span>
+      <span class="card-icon">🎴</span>
+      <div class="card-name">고스톱</div>
+      <div class="card-desc">AI와 대결<br>짝 맞추기</div>
+    </div>
+
+    <div class="game-card card-billiard" onclick="launchGame('billiard')" style="animation-delay:0.2s">
+      <span class="card-icon">🎱</span>
+      <div class="card-name">당구</div>
+      <div class="card-desc">2D 탑뷰<br>물리 충돌</div>
+    </div>
+
+    <div class="game-card card-bowling" onclick="launchGame('bowling')" style="animation-delay:0.25s">
+      <span class="card-icon">🎳</span>
+      <div class="card-name">볼링</div>
+      <div class="card-desc">방향·파워<br>스트라이크!</div>
+    </div>
+
+    <div class="game-card card-tank" onclick="launchGame('tank')" style="animation-delay:0.3s; grid-column:1/-1;">
+      <span class="card-icon">🎖️</span>
+      <div class="card-name">탱크 배틀</div>
+      <div class="card-desc">Battle City 스타일 · AI 탱크 격파 · 스테이지 클리어</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== 게임 화면 ==================== -->
+<div id="game-screen" class="screen">
+  <!-- 상단 바 -->
+  <div id="game-bar">
+    <button id="btn-back" onclick="goHub()">← 메뉴</button>
+    <div id="game-title">GAME</div>
+    <div id="game-score-bar">0</div>
+  </div>
+
+  <!-- 캔버스 영역 -->
+  <div id="canvas-container">
+    <canvas id="gc"></canvas>
+    <div id="fx-layer"></div>
+    <div id="float-layer"></div>
+  </div>
+
+  <!-- 컨트롤 패드 (게임마다 동적으로 변경) -->
+  <div id="ctrl-pad"></div>
+</div>
+
+<!-- ==================== 오버레이 (게임오버/클리어) ==================== -->
+<div id="overlay">
+  <div class="ov-title" id="ov-title">GAME OVER</div>
+  <div class="ov-sub"  id="ov-sub">수고하셨습니다</div>
+  <div class="ov-stats" id="ov-stats"></div>
+  <button class="ov-btn ov-btn-play" id="ov-retry" onclick="retryGame()">다시 하기</button>
+  <button class="ov-btn ov-btn-menu" onclick="goHub()">메인 메뉴</button>
+</div>
+
+<script>
+/* ==========================================================
+   전역 상태 & 유틸리티
+   ========================================================== */
+const canvas = document.getElementById('gc');
+const ctx    = canvas.getContext('2d');
+
+let currentGame = null;  // 현재 실행 중인 게임 이름
+let rafId = null;        // requestAnimationFrame id
+let scores = JSON.parse(localStorage.getItem('arcadeScores') || '{}');
+
+/* 최고점 저장 */
+function saveScore(game, val) {
+  if (!scores[game] || val > scores[game]) {
+    scores[game] = val;
+    localStorage.setItem('arcadeScores', JSON.stringify(scores));
+    updateHubScores();
+  }
+}
+function updateHubScores() {
+  ['tetris','snake','brick','tank'].forEach(g => {
+    const el = document.getElementById('hs-' + g);
+    if (el) el.textContent = scores[g] || 0;
+  });
+}
+updateHubScores();
+
+/* 화면 전환 */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* 이펙트 */
+function flashFX(color='#ffffff') {
+  const el = document.getElementById('fx-layer');
+  el.style.background = color;
+  el.style.opacity = '0.35';
+  setTimeout(() => { el.style.opacity = '0'; }, 120);
+}
+function shakeFX() {
+  const c = document.getElementById('canvas-container');
+  c.style.animation = 'shake 0.3s ease';
+  setTimeout(() => { c.style.animation = ''; }, 300);
+}
+function floatText(txt, x, y, color='#ffd700') {
+  const el = document.createElement('div');
+  el.className = 'float-txt';
+  el.textContent = txt;
+  el.style.color = color;
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  document.getElementById('float-layer').appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+/* 허브로 돌아가기 */
+function goHub() {
+  stopGame();
+  document.getElementById('overlay').classList.remove('show');
+  showScreen('hub');
+  updateHubScores();
+}
+
+/* 게임 중지 */
+function stopGame() {
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  currentGame = null;
+  document.getElementById('ctrl-pad').innerHTML = '';
+}
+
+/* 오버레이 표시 */
+function showOverlay(title, sub, rows, color='var(--red)') {
+  document.getElementById('ov-title').textContent = title;
+  document.getElementById('ov-title').style.color = color;
+  document.getElementById('ov-sub').textContent   = sub;
+  const stats = document.getElementById('ov-stats');
+  stats.innerHTML = rows.map(([l,v,c]) =>
+    `<div class="ov-row"><span class="ov-label">${l}</span><span class="ov-value" style="color:${c||'var(--text)'}">${v}</span></div>`
+  ).join('');
+  document.getElementById('overlay').classList.add('show');
+}
+
+/* 다시하기 */
+function retryGame() {
+  document.getElementById('overlay').classList.remove('show');
+  launchGame(currentGame);
+}
+
+/* 게임 실행 */
+function launchGame(name) {
+  stopGame();
+  currentGame = name;
+  showScreen('game-screen');
+  document.getElementById('float-layer').innerHTML = '';
+  document.getElementById('overlay').classList.remove('show');
+
+  // 캔버스 크기 조정
+  resizeCanvas();
+
+  // 게임별 초기화
+  const games = { tetris:initTetris, snake:initSnake, brick:initBrick,
+                  gostop:initGostop, billiard:initBilliard, bowling:initBowling, tank:initTank };
+  if (games[name]) games[name]();
+}
+
+/* 캔버스 크기 */
+function resizeCanvas() {
+  const bar   = document.getElementById('game-bar').offsetHeight;
+  const ctrl  = document.getElementById('ctrl-pad').offsetHeight || 0;
+  const avail = window.innerHeight - bar - ctrl - 4;
+  const w     = Math.min(window.innerWidth, 480);
+  canvas.width  = w;
+  canvas.height = avail;
+}
+
+/* 게임 타이틀/점수 갱신 */
+function setGameUI(title, score, color='#ffd700') {
+  document.getElementById('game-title').textContent = title;
+  document.getElementById('game-title').style.color = color;
+  document.getElementById('game-score-bar').textContent = score;
+}
+
+/* ============================================================
+   1. 테트리스
+   ============================================================ */
+const T = {
+  COLS:10, ROWS:20,
+  board:[], cur:null, next:null,
+  score:0, lines:0, level:1,
+  dropInterval:800, lastDrop:0,
+  running:false,
+  pieces:[
+    {shape:[[1,1,1,1]],           color:'#00e5ff'},
+    {shape:[[1,1],[1,1]],         color:'#ffd700'},
+    {shape:[[0,1,0],[1,1,1]],     color:'#cc44ff'},
+    {shape:[[0,1,1],[1,1,0]],     color:'#00ff88'},
+    {shape:[[1,1,0],[0,1,1]],     color:'#ff2244'},
+    {shape:[[1,0,0],[1,1,1]],     color:'#4488ff'},
+    {shape:[[0,0,1],[1,1,1]],     color:'#ff8800'},
+  ]
+};
+
+function initTetris() {
+  setGameUI('TETRIS', 0, '#ff2244');
+  T.board = Array.from({length:T.ROWS}, () => Array(T.COLS).fill(0));
+  T.score = 0; T.lines = 0; T.level = 1;
+  T.dropInterval = 800; T.running = true;
+  T.cur  = tNewPiece();
+  T.next = tNewPiece();
+
+  /* 컨트롤 */
+  document.getElementById('ctrl-pad').innerHTML = `
+    <div style="display:flex;gap:8px;padding:6px 10px;justify-content:center">
+      <button class="act-btn act-blue" style="font-size:22px" id="tb-l" ontouchstart="tMv(-1)" onclick="tMv(-1)">◀</button>
+      <button class="act-btn act-blue" style="font-size:22px" id="tb-r" ontouchstart="tMv(1)"  onclick="tMv(1)">▶</button>
+      <button class="act-btn act-yellow" ontouchstart="tRot()" onclick="tRot()">↻ 회전</button>
+      <button class="act-btn act-red" ontouchstart="tDrop()" onclick="tDrop()">▼▼ 낙하</button>
+    </div>`;
+  resizeCanvas();
+
+  /* 터치 스와이프 */
+  let sx=0,sy=0;
+  canvas.ontouchstart = e=>{ sx=e.touches[0].clientX; sy=e.touches[0].clientY; };
+  canvas.ontouchend   = e=>{
+    const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)>Math.abs(dy)){ dx>30?tMv(1):dx<-30&&tMv(-1); }
+    else { dy>30?tDrop():dy<-30&&tRot(); }
+  };
+
+  /* 키보드 */
+  document.onkeydown = e=>{
+    if(currentGame!=='tetris') return;
+    if(e.key==='ArrowLeft')  tMv(-1);
+    if(e.key==='ArrowRight') tMv(1);
+    if(e.key==='ArrowUp')    tRot();
+    if(e.key==='ArrowDown'||e.key===' ') tDrop();
+  };
+
+  const loop = ts => {
+    if(!T.running||currentGame!=='tetris') return;
+    if(ts-T.lastDrop > T.dropInterval) {
+      if(!tCollide(T.cur,0,1)) T.cur.y++;
+      else tLock();
+      T.lastDrop = ts;
+    }
+    tDraw();
+    rafId = requestAnimationFrame(loop);
+  };
+  rafId = requestAnimationFrame(loop);
+}
+
+function tNewPiece() {
+  const t = T.pieces[Math.floor(Math.random()*T.pieces.length)];
+  return { shape:t.shape.map(r=>[...r]), color:t.color,
+           x:Math.floor(T.COLS/2)-Math.floor(t.shape[0].length/2), y:0 };
+}
+function tCollide(p,dx,dy,sh=null) {
+  const s=sh||p.shape;
+  for(let r=0;r<s.length;r++) for(let c=0;c<s[r].length;c++) {
+    if(!s[r][c]) continue;
+    const nx=p.x+c+dx, ny=p.y+r+dy;
+    if(nx<0||nx>=T.COLS||ny>=T.ROWS) return true;
+    if(ny>=0 && T.board[ny][nx]) return true;
+  }
+  return false;
+}
+function tMv(dx) {
+  if(!T.running) return;
+  if(!tCollide(T.cur,dx,0)) T.cur.x+=dx;
+}
+function tRot() {
+  if(!T.running) return;
+  const nr = T.cur.shape[0].map((_,i)=>T.cur.shape.map(r=>r[i]).reverse());
+  if(!tCollide(T.cur,0,0,nr)) T.cur.shape=nr;
+  else if(!tCollide(T.cur,1,0,nr)){T.cur.shape=nr;T.cur.x++;}
+  else if(!tCollide(T.cur,-1,0,nr)){T.cur.shape=nr;T.cur.x--;}
+}
+function tDrop() {
+  if(!T.running) return;
+  while(!tCollide(T.cur,0,1)) T.cur.y++;
+  tLock();
+  shakeFX();
+}
+function tLock() {
+  T.cur.shape.forEach((row,r)=>row.forEach((v,c)=>{
+    if(v) { if(T.cur.y+r<0){T.running=false; tGameOver(); return; }
+            T.board[T.cur.y+r][T.cur.x+c]=T.cur.color; }
+  }));
+  if(!T.running) return;
+  /* 줄 제거 */
+  let cleared=0;
+  T.board = T.board.filter(row=>{ if(row.every(c=>c)){cleared++;return false;} return true; });
+  while(T.board.length<T.ROWS) T.board.unshift(Array(T.COLS).fill(0));
+  if(cleared>0){
+    const pts=[0,100,300,600,1000];
+    T.score+=pts[cleared]*T.level;
+    T.lines+=cleared;
+    T.level=Math.floor(T.lines/10)+1;
+    T.dropInterval=Math.max(150,800-T.level*60);
+    flashFX(cleared>=4?'#ffd700':'#00ff88');
+    floatText(cleared>=4?'TETRIS! +1000':'CLEAR! +'+pts[cleared]*T.level, 20, 60, '#00ff88');
+    setGameUI('TETRIS', T.score, '#ff2244');
+  }
+  T.cur=T.next; T.next=tNewPiece();
+}
+function tGameOver() {
+  saveScore('tetris', T.score);
+  showOverlay('GAME OVER','더 이상 쌓을 수 없습니다',
+    [['점수',T.score,'#ffd700'],['제거 줄',T.lines,'#00ff88'],['레벨',T.level,'#ff8800']]);
+}
+function tDraw() {
+  const cw=canvas.width, ch=canvas.height;
+  const cell=Math.floor(Math.min(cw/T.COLS, ch/T.ROWS));
+  const ox=Math.floor((cw-cell*T.COLS)/2);
+  ctx.fillStyle='#080810'; ctx.fillRect(0,0,cw,ch);
+  /* 그리드 */
+  ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=0.5;
+  for(let r=0;r<T.ROWS;r++) for(let c=0;c<T.COLS;c++) ctx.strokeRect(ox+c*cell,r*cell,cell,cell);
+  /* 고정 블록 */
+  T.board.forEach((row,r)=>row.forEach((col,c)=>{ if(col) tDrawCell(ctx,ox+c*cell,r*cell,cell,col); }));
+  /* 고스트 */
+  let gy=T.cur.y; while(!tCollide(T.cur,0,gy-T.cur.y+1)) gy++;
+  ctx.globalAlpha=0.18;
+  T.cur.shape.forEach((row,r)=>row.forEach((v,c)=>{
+    if(v) tDrawCell(ctx,ox+(T.cur.x+c)*cell,(gy+r)*cell,cell,T.cur.color);
+  }));
+  ctx.globalAlpha=1;
+  /* 현재 블록 */
+  T.cur.shape.forEach((row,r)=>row.forEach((v,c)=>{
+    if(v) tDrawCell(ctx,ox+(T.cur.x+c)*cell,(T.cur.y+r)*cell,cell,T.cur.color);
+  }));
+  /* 오른쪽 NEXT */
+  if(ox>0){
+    const nx=ox+T.COLS*cell+6;
+    ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(nx,4,ox-10,60);
+    ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font='9px Black Ops One'; ctx.textAlign='left';
+    ctx.fillText('NEXT',nx+4,16);
+    T.next.shape.forEach((row,r)=>row.forEach((v,c)=>{
+      if(v) tDrawCell(ctx,nx+4+c*14,20+r*14,13,T.next.color);
+    }));
+    ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fillText('LV.'+T.level,nx+4,100);
+  }
+}
+function tDrawCell(ctx,x,y,sz,color) {
+  ctx.shadowBlur=4; ctx.shadowColor=color;
+  ctx.fillStyle=color; ctx.fillRect(x+1,y+1,sz-2,sz-2);
+  ctx.fillStyle='rgba(255,255,255,0.22)'; ctx.fillRect(x+1,y+1,sz-2,Math.floor(sz*0.28));
+  ctx.shadowBlur=0;
+}
+
+/* ============================================================
+   2. 스네이크
+   ============================================================ */
+const SN = {
+  COLS:20, ROWS:20, CELL:0,
+  snake:[], dir:{x:1,y:0}, next:{x:1,y:0},
+  food:{x:0,y:0}, score:0, running:false, interval:null
+};
+
+function initSnake() {
+  setGameUI('SNAKE', 0, '#00ff88');
+  SN.CELL = Math.floor(Math.min(canvas.width/SN.COLS, canvas.height/SN.ROWS));
+  SN.snake=[{x:10,y:10},{x:9,y:10},{x:8,y:10}];
+  SN.dir={x:1,y:0}; SN.next={x:1,y:0};
+  SN.score=0; SN.running=true;
+  snPlaceFood();
+
+  document.getElementById('ctrl-pad').innerHTML=`
+    <div style="padding:4px 0">
+      <div class="dpad-wrap" style="width:152px;height:152px">
+        <div></div>
+        <button class="dpad-btn dpad-up"    ontouchstart="snDir(0,-1)" onclick="snDir(0,-1)">▲</button>
+        <div></div>
+        <button class="dpad-btn dpad-left"  ontouchstart="snDir(-1,0)" onclick="snDir(-1,0)">◀</button>
+        <div class="dpad-btn dpad-center" style="font-size:10px;color:var(--dim)">●</div>
+        <button class="dpad-btn dpad-right" ontouchstart="snDir(1,0)"  onclick="snDir(1,0)">▶</button>
+        <div></div>
+        <button class="dpad-btn dpad-down"  ontouchstart="snDir(0,1)"  onclick="snDir(0,1)">▼</button>
+        <div></div>
+      </div>
+    </div>`;
+  resizeCanvas();
+
+  canvas.ontouchstart=e=>{const r=e.touches[0]; SN._tx=r.clientX; SN._ty=r.clientY;};
+  canvas.ontouchend=e=>{
+    const dx=e.changedTouches[0].clientX-SN._tx, dy=e.changedTouches[0].clientY-SN._ty;
+    if(Math.abs(dx)>Math.abs(dy)) snDir(dx>0?1:-1,0); else snDir(0,dy>0?1:-1);
+  };
+  document.onkeydown=e=>{
+    if(currentGame!=='snake') return;
+    if(e.key==='ArrowLeft')  snDir(-1,0);
+    if(e.key==='ArrowRight') snDir(1,0);
+    if(e.key==='ArrowUp')    snDir(0,-1);
+    if(e.key==='ArrowDown')  snDir(0,1);
+  };
+
+  clearInterval(SN.interval);
+  SN.interval = setInterval(snStep, 140);
+
+  /* 그리기 루프 */
+  const draw=()=>{ if(currentGame!=='snake') return; snDraw(); rafId=requestAnimationFrame(draw); };
+  rafId=requestAnimationFrame(draw);
+}
+function snDir(x,y) {
+  if(SN.dir.x===-x&&SN.dir.y===-y) return; // 반대 방향 무시
+  SN.next={x,y};
+}
+function snPlaceFood() {
+  do { SN.food={x:Math.floor(Math.random()*SN.COLS), y:Math.floor(Math.random()*SN.ROWS)}; }
+  while(SN.snake.some(s=>s.x===SN.food.x&&s.y===SN.food.y));
+}
+function snStep() {
+  if(!SN.running||currentGame!=='snake') return;
+  SN.dir=SN.next;
+  const head={x:SN.snake[0].x+SN.dir.x, y:SN.snake[0].y+SN.dir.y};
+  /* 벽 충돌 */
+  if(head.x<0||head.x>=SN.COLS||head.y<0||head.y>=SN.ROWS||
+     SN.snake.some(s=>s.x===head.x&&s.y===head.y)) {
+    SN.running=false; clearInterval(SN.interval);
+    saveScore('snake',SN.score);
+    showOverlay('GAME OVER','뱀이 죽었습니다',[['점수',SN.score,'#ffd700'],['길이',SN.snake.length,'#00ff88']]);
+    return;
+  }
+  SN.snake.unshift(head);
+  if(head.x===SN.food.x&&head.y===SN.food.y) {
+    SN.score+=10; setGameUI('SNAKE',SN.score,'#00ff88');
+    snPlaceFood(); flashFX('#00ff88');
+    floatText('+10',head.x*SN.CELL,head.y*SN.CELL,'#00ff88');
+  } else SN.snake.pop();
+}
+function snDraw() {
+  const {COLS,ROWS,CELL} = SN;
+  ctx.fillStyle='#060610'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  /* 그리드 */
+  ctx.strokeStyle='rgba(0,255,136,0.04)'; ctx.lineWidth=0.5;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) ctx.strokeRect(c*CELL,r*CELL,CELL,CELL);
+  /* 먹이 */
+  ctx.fillStyle='#ff2244'; ctx.shadowBlur=10; ctx.shadowColor='#ff2244';
+  ctx.beginPath(); ctx.arc(SN.food.x*CELL+CELL/2,SN.food.y*CELL+CELL/2,CELL*0.38,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+  /* 뱀 */
+  SN.snake.forEach((s,i)=>{
+    const t=1-i/SN.snake.length;
+    ctx.fillStyle=`hsl(${140+i*3},100%,${40+t*20}%)`;
+    ctx.shadowBlur=i===0?8:0; ctx.shadowColor='#00ff88';
+    ctx.fillRect(s.x*CELL+1,s.y*CELL+1,CELL-2,CELL-2);
+  });
+  ctx.shadowBlur=0;
+  /* 점수 */
+  ctx.fillStyle='rgba(0,255,136,0.7)'; ctx.font='bold 13px Black Ops One'; ctx.textAlign='left';
+  ctx.fillText('● '+SN.score, 8, 22);
+}
+
+/* ============================================================
+   3. 벽돌깨기
+   ============================================================ */
+const BR = {
+  bricks:[], ball:{x:0,y:0,dx:3,dy:-4,r:8},
+  paddle:{x:0,w:80,h:12,y:0},
+  score:0, lives:3, running:false, started:false,
+  cols:7, rows:5, bw:0, bh:24, bpad:4
+};
+
+function initBrick() {
+  setGameUI('BRICK', 0, '#ff8800');
+  document.getElementById('ctrl-pad').innerHTML=`
+    <div class="action-row">
+      <button class="act-btn act-blue act-wide" id="br-left"  ontouchstart="BR.pkd=-1" ontouchend="BR.pkd=0" onmousedown="BR.pkd=-1" onmouseup="BR.pkd=0">◀ 이동</button>
+      <button class="act-btn act-red  act-wide" id="br-right" ontouchstart="BR.pkd=1"  ontouchend="BR.pkd=0" onmousedown="BR.pkd=1"  onmouseup="BR.pkd=0">이동 ▶</button>
+    </div>`;
+  resizeCanvas();
+  BR.pkd=0;
+
+  const W=canvas.width, H=canvas.height;
+  BR.paddle.x=W/2-40; BR.paddle.y=H-30;
+  BR.ball.x=W/2; BR.ball.y=H-60;
+  BR.ball.dx=3.5; BR.ball.dy=-4;
+  BR.score=0; BR.lives=3; BR.running=true; BR.started=false;
+  BR.bw=Math.floor((W-BR.bpad*(BR.cols+1))/BR.cols);
+
+  const colors=['#ff2244','#ff8800','#ffd700','#00ff88','#00e5ff'];
+  BR.bricks=[];
+  for(let r=0;r<BR.rows;r++) for(let c=0;c<BR.cols;c++) {
+    BR.bricks.push({x:BR.bpad+(BR.bw+BR.bpad)*c, y:50+r*(BR.bh+BR.bpad),
+                    w:BR.bw, h:BR.bh-BR.bpad, alive:true,
+                    color:colors[r%colors.length], hp:BR.rows-r});
+  }
+
+  /* 터치로 패들 직접 이동 */
+  canvas.ontouchmove=e=>{ e.preventDefault();
+    BR.paddle.x=e.touches[0].clientX-BR.paddle.w/2; };
+  canvas.ontouchstart=e=>{ if(!BR.started){BR.started=true;} };
+  canvas.onmousemove=e=>{ BR.paddle.x=e.offsetX-BR.paddle.w/2; };
+  canvas.onclick=()=>{ BR.started=true; };
+
+  const step=()=>{
+    if(!BR.running||currentGame!=='brick') return;
+    /* 버튼 방향 이동 */
+    if(BR.pkd) BR.paddle.x+=BR.pkd*5;
+    BR.paddle.x=Math.max(0,Math.min(canvas.width-BR.paddle.w,BR.paddle.x));
+    if(BR.started) brUpdate();
+    brDraw();
+    rafId=requestAnimationFrame(step);
+  };
+  rafId=requestAnimationFrame(step);
+}
+function brUpdate() {
+  const b=BR.ball, W=canvas.width, H=canvas.height, p=BR.paddle;
+  b.x+=b.dx; b.y+=b.dy;
+  if(b.x-b.r<0){b.x=b.r;b.dx=Math.abs(b.dx);}
+  if(b.x+b.r>W){b.x=W-b.r;b.dx=-Math.abs(b.dx);}
+  if(b.y-b.r<0){b.y=b.r;b.dy=Math.abs(b.dy);}
+  /* 패들 충돌 */
+  if(b.y+b.r>p.y&&b.y-b.r<p.y+p.h&&b.x>p.x&&b.x<p.x+p.w) {
+    b.dy=-Math.abs(b.dy);
+    b.dx=(b.x-(p.x+p.w/2))/p.w*6;
+  }
+  /* 바닥 */
+  if(b.y+b.r>H) {
+    BR.lives--;
+    if(BR.lives<=0){ BR.running=false; saveScore('brick',BR.score);
+      showOverlay('GAME OVER','공을 놓쳤습니다',[['점수',BR.score,'#ffd700'],['남은 목숨',0,'#ff2244']]);
+      return; }
+    b.x=W/2; b.y=p.y-30; b.dx=3.5; b.dy=-4; BR.started=false;
+    flashFX('#ff2244'); shakeFX();
+  }
+  /* 벽돌 충돌 */
+  BR.bricks.forEach(bk=>{
+    if(!bk.alive) return;
+    if(b.x+b.r>bk.x&&b.x-b.r<bk.x+bk.w&&b.y+b.r>bk.y&&b.y-b.r<bk.y+bk.h) {
+      bk.hp--;
+      if(bk.hp<=0){ bk.alive=false; BR.score+=10; setGameUI('BRICK',BR.score,'#ff8800'); flashFX(bk.color); }
+      /* 반사 방향 */
+      const ox=b.x-(bk.x+bk.w/2), oy=b.y-(bk.y+bk.h/2);
+      if(Math.abs(ox/bk.w)>Math.abs(oy/bk.h)) b.dx*=-1; else b.dy*=-1;
+    }
+  });
+  /* 클리어 */
+  if(BR.bricks.every(bk=>!bk.alive)){
+    BR.running=false; saveScore('brick',BR.score);
+    showOverlay('CLEAR!','모든 벽돌 파괴!',
+      [['점수',BR.score,'#ffd700'],['남은 목숨',BR.lives,'#00ff88']],'#00ff88');
+  }
+}
+function brDraw() {
+  const W=canvas.width,H=canvas.height,b=BR.ball,p=BR.paddle;
+  ctx.fillStyle='#060610'; ctx.fillRect(0,0,W,H);
+  /* 벽돌 */
+  BR.bricks.forEach(bk=>{
+    if(!bk.alive) return;
+    const alpha=bk.hp/(BR.rows);
+    ctx.fillStyle=bk.color; ctx.globalAlpha=0.4+alpha*0.6;
+    ctx.shadowBlur=4; ctx.shadowColor=bk.color;
+    ctx.fillRect(bk.x,bk.y,bk.w,bk.h);
+    ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.fillRect(bk.x,bk.y,bk.w,4);
+  });
+  ctx.globalAlpha=1; ctx.shadowBlur=0;
+  /* 패들 */
+  ctx.fillStyle='#4488ff'; ctx.shadowBlur=10; ctx.shadowColor='#4488ff';
+  ctx.beginPath(); ctx.roundRect(p.x,p.y,p.w,p.h,6); ctx.fill();
+  /* 공 */
+  ctx.fillStyle='#ffffff'; ctx.shadowBlur=12; ctx.shadowColor='#ffffff';
+  ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+  /* 목숨 */
+  ctx.fillStyle='#ff4466'; ctx.font='13px sans-serif'; ctx.textAlign='right';
+  ctx.fillText('❤'.repeat(BR.lives), W-8, 22);
+  if(!BR.started){
+    ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='bold 14px Noto Sans KR'; ctx.textAlign='center';
+    ctx.fillText('탭 / 클릭하여 시작', W/2, H/2);
+  }
+}
+
+/* ============================================================
+   4. 고스톱 (간단 버전)
+   ============================================================ */
+/* 화투 패: 1월~12월, 각 4장 (광,열끗,피,피) */
+const GS = {
+  deck:[], playerHand:[], aiHand:[],
+  field:[], playerCapture:[], aiCapture:[],
+  playerScore:0, aiScore:0, turn:'player',
+  selected:-1, running:false, phase:'select', message:''
+};
+
+/* 화투 데이터 */
+const HWATU_COLORS = [
+  '#cc2244','#dd4400','#aa6600','#008844',
+  '#006699','#4400aa','#880066','#cc4400',
+  '#005588','#220066','#006633','#884400'
+];
+const HWATU_MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+/* 각 월별 광/열끗/피 종류 */
+const HWATU_TYPES = ['광','열','피','피'];
+const HWATU_POINTS = [3,2,1,1]; // 광=3, 열끗=2, 피=1
+
+function gsCreateDeck() {
+  const deck=[];
+  for(let m=0;m<12;m++) {
+    for(let t=0;t<4;t++) deck.push({month:m+1,type:HWATU_TYPES[t],pt:HWATU_POINTS[t],id:`${m+1}_${t}`});
+  }
+  /* 셔플 */
+  for(let i=deck.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; }
+  return deck;
+}
+
+function initGostop() {
+  setGameUI('고스톱', 0, '#ff6688');
+  GS.deck=gsCreateDeck();
+  GS.playerHand=[]; GS.aiHand=[];
+  GS.field=[]; GS.playerCapture=[]; GS.aiCapture=[];
+  GS.playerScore=0; GS.aiScore=0;
+  GS.turn='player'; GS.selected=-1; GS.running=true;
+  GS.phase='select'; GS.message='내 차례 - 패를 선택하세요';
+
+  /* 배분: 플레이어 5, AI 5, 필드 6 */
+  for(let i=0;i<5;i++){GS.playerHand.push(GS.deck.pop()); GS.aiHand.push(GS.deck.pop());}
+  for(let i=0;i<6;i++) GS.field.push(GS.deck.pop());
+
+  document.getElementById('ctrl-pad').innerHTML=`
+    <div class="action-row" style="padding:6px 10px">
+      <button class="act-btn act-red"    onclick="gsAction('go')">GO!</button>
+      <button class="act-btn act-yellow" onclick="gsAction('stop')">STOP</button>
+    </div>`;
+  resizeCanvas();
+
+  const draw=()=>{ if(currentGame!=='gostop') return; gsDraw(); rafId=requestAnimationFrame(draw); };
+  rafId=requestAnimationFrame(draw);
+}
+
+function gsCardClick(idx) {
+  if(!GS.running||GS.turn!=='player'||GS.phase!=='select') return;
+  GS.selected=idx;
+  gsPlayCard(idx, 'player');
+}
+
+function gsPlayCard(idx, who) {
+  const hand = who==='player'?GS.playerHand:GS.aiHand;
+  const capture = who==='player'?GS.playerCapture:GS.aiCapture;
+  const card = hand.splice(idx,1)[0];
+
+  /* 같은 월 찾기 */
+  const matches = GS.field.filter(c=>c.month===card.month);
+  if(matches.length>0){
+    /* 첫 장 먹기 */
+    const taken=matches.splice(0,1)[0];
+    GS.field=GS.field.filter(c=>c!==taken);
+    capture.push(card,taken);
+    GS.message=who==='player'?`${card.month}월 매칭! 획득!`:`AI가 ${card.month}월 획득`;
+    flashFX(who==='player'?'#00ff88':'#ff2244');
+  } else {
+    GS.field.push(card);
+    GS.message=who==='player'?'매칭 없음 - 필드에 냄':'AI가 필드에 냄';
+  }
+
+  /* 뒤집기 카드 1장 */
+  if(GS.deck.length>0){
+    const flip=GS.deck.pop();
+    const fm=GS.field.filter(c=>c.month===flip.month);
+    if(fm.length>0){ const ft=fm[0]; GS.field=GS.field.filter(c=>c!==ft); capture.push(flip,ft); }
+    else GS.field.push(flip);
+  }
+
+  /* 점수 계산 */
+  gsCalcScore();
+
+  /* 게임 종료 조건 */
+  if(GS.playerHand.length===0&&GS.aiHand.length===0) { gsEnd(); return; }
+
+  /* 턴 전환 */
+  GS.turn=who==='player'?'ai':'player';
+  GS.selected=-1;
+  if(GS.turn==='ai') setTimeout(gsAiTurn, 900);
+  else GS.message='내 차례 - 패를 선택하세요';
+}
+
+function gsAiTurn() {
+  if(!GS.running||currentGame!=='gostop') return;
+  /* AI: 매칭 있으면 매칭 우선 */
+  let idx=0;
+  const match=GS.aiHand.findIndex(c=>GS.field.some(f=>f.month===c.month));
+  if(match>=0) idx=match;
+  gsPlayCard(idx,'ai');
+}
+
+function gsCalcScore() {
+  GS.playerScore=GS.playerCapture.reduce((s,c)=>s+c.pt,0);
+  GS.aiScore=GS.aiCapture.reduce((s,c)=>s+c.pt,0);
+  setGameUI('고스톱',GS.playerScore,'#ff6688');
+}
+
+function gsAction(act) {
+  if(!GS.running) return;
+  if(act==='stop'||act==='go') gsEnd();
+}
+
+function gsEnd() {
+  GS.running=false;
+  const win=GS.playerScore>=GS.aiScore;
+  saveScore('gostop',GS.playerScore);
+  showOverlay(win?'승리!':'패배...',win?'고스톱 승리!':'AI가 이겼습니다',
+    [['내 점수',GS.playerScore,'#ffd700'],['AI 점수',GS.aiScore,'#ff8888'],
+     ['획득 패',GS.playerCapture.length,'#00ff88']],
+    win?'#00ff88':'#ff2244');
+}
+
+function gsDraw() {
+  const W=canvas.width, H=canvas.height;
+  ctx.fillStyle='#0a1a0a'; ctx.fillRect(0,0,W,H);
+
+  /* 배경 테이블 */
+  ctx.fillStyle='#0d2010';
+  ctx.beginPath(); ctx.roundRect(10,10,W-20,H-20,16); ctx.fill();
+  ctx.strokeStyle='#1a4020'; ctx.lineWidth=2; ctx.stroke();
+
+  const cw=42,ch=60,gap=6;
+
+  /* AI 패 (뒷면) */
+  ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.font='10px Noto Sans KR'; ctx.textAlign='center';
+  ctx.fillText('AI 패 '+GS.aiHand.length+'장', W/2, 28);
+  GS.aiHand.forEach((_,i)=>gsDrawBack(ctx, 10+(cw+gap)*i, 36, cw, ch));
+
+  /* 필드 */
+  const fieldY=H/2-ch/2-10;
+  ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.font='10px Noto Sans KR';
+  ctx.fillText('필드', W/2, fieldY-6);
+  GS.field.forEach((c,i)=>gsDrawCard(ctx, 10+(cw+gap)*i, fieldY, cw, ch, c, false));
+
+  /* 플레이어 패 */
+  const handY=H-ch-36;
+  ctx.fillStyle='rgba(255,215,0,0.7)'; ctx.font='11px Noto Sans KR';
+  ctx.fillText('내 패 (탭으로 선택)', W/2, handY-8);
+  GS.playerHand.forEach((c,i)=>{
+    const x=10+(cw+gap)*i, y=handY+(i===GS.selected?-8:0);
+    gsDrawCard(ctx,x,y,cw,ch,c,true);
+  });
+
+  /* 메시지 */
+  ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='bold 11px Noto Sans KR'; ctx.textAlign='center';
+  ctx.fillText(GS.message, W/2, fieldY+ch+16);
+
+  /* 점수 */
+  ctx.fillStyle='#ffd700'; ctx.font='bold 12px Black Ops One'; ctx.textAlign='left';
+  ctx.fillText('나: '+GS.playerScore, 12, H-8);
+  ctx.fillStyle='#ff8888'; ctx.textAlign='right';
+  ctx.fillText('AI: '+GS.aiScore, W-12, H-8);
+}
+
+function gsDrawCard(ctx,x,y,w,h,card,clickable) {
+  const m=card.month-1;
+  ctx.fillStyle=HWATU_COLORS[m]; ctx.shadowBlur=clickable?6:2; ctx.shadowColor=HWATU_COLORS[m];
+  ctx.beginPath(); ctx.roundRect(x,y,w,h,5); ctx.fill(); ctx.shadowBlur=0;
+  ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.font='bold 9px Noto Sans KR'; ctx.textAlign='center';
+  ctx.fillText(HWATU_MONTHS[m],x+w/2,y+14);
+  ctx.font='8px Noto Sans KR'; ctx.fillStyle='rgba(255,255,255,0.7)';
+  ctx.fillText(card.type,x+w/2,y+28);
+  ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='bold 11px Black Ops One';
+  ctx.fillText(card.pt,x+w/2,y+h-8);
+  /* 클릭 이벤트 */
+  canvas.onclick=e=>{
+    if(!GS.running||GS.turn!=='player') return;
+    const rect=canvas.getBoundingClientRect();
+    const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
+    GS.playerHand.forEach((_,i)=>{
+      const px=10+(w+gap)*i, py=canvas.height-h-36;
+      if(cx>px&&cx<px+w&&cy>py-8&&cy<py+h) { GS.selected=i; gsPlayCard(i,'player'); }
+    });
+  };
+  canvas.ontouchstart=e=>{
+    if(!GS.running||GS.turn!=='player') return;
+    const rect=canvas.getBoundingClientRect();
+    const cx=e.touches[0].clientX-rect.left, cy=e.touches[0].clientY-rect.top;
+    GS.playerHand.forEach((_,i)=>{
+      const px=10+(w+gap)*i, py=canvas.height-h-36;
+      if(cx>px&&cx<px+w&&cy>py-10&&cy<py+h+10) { GS.selected=i; gsPlayCard(i,'player'); }
+    });
+  };
+}
+function gsDrawBack(ctx,x,y,w,h) {
+  ctx.fillStyle='#1a3a1a'; ctx.beginPath(); ctx.roundRect(x,y,w,h,5); ctx.fill();
+  ctx.strokeStyle='#2a5a2a'; ctx.lineWidth=1; ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.1)'; ctx.font='16px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('🃏',x+w/2,y+h/2+6);
+}
+
+/* ============================================================
+   5. 당구
+   ============================================================ */
+const BL = {
+  balls:[], cue:{x:0,y:0}, aiming:false,
+  aimAngle:0, power:0, shooting:false,
+  score:0, running:false, shots:0
+};
+
+function initBilliard() {
+  setGameUI('당구', 0, '#00e5ff');
+  document.getElementById('ctrl-pad').innerHTML=`
+    <div class="action-row">
+      <button class="act-btn act-blue" ontouchstart="BL.turning=-1" ontouchend="BL.turning=0" onmousedown="BL.turning=-1" onmouseup="BL.turning=0">◀ 조준</button>
+      <button class="act-btn act-red act-wide" onclick="blShoot()">🎱 샷!</button>
+      <button class="act-btn act-blue" ontouchstart="BL.turning=1" ontouchend="BL.turning=0" onmousedown="BL.turning=1" onmouseup="BL.turning=0">조준 ▶</button>
+    </div>
+    <div style="padding:0 12px 8px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:11px;color:var(--dim)">파워</span>
+      <input type="range" id="bl-power" min="2" max="14" value="7" style="flex:1;height:28px;accent-color:#00e5ff">
+    </div>`;
+  resizeCanvas();
+  BL.turning=0;
+
+  const W=canvas.width,H=canvas.height;
+  BL.score=0; BL.shots=0; BL.running=true; BL.shooting=false;
+  BL.aimAngle=0;
+
+  /* 공 배치 */
+  BL.balls=[
+    {x:W*0.28,y:H/2,dx:0,dy:0,r:14,color:'#f5e0a0',isCue:true}, /* 흰 공 (큐볼) */
+    {x:W*0.62,y:H/2,   dx:0,dy:0,r:13,color:'#ff8800',isCue:false},
+    {x:W*0.68,y:H/2-16,dx:0,dy:0,r:13,color:'#cc2244',isCue:false},
+    {x:W*0.68,y:H/2+16,dx:0,dy:0,r:13,color:'#2255cc',isCue:false},
+    {x:W*0.74,y:H/2,   dx:0,dy:0,r:13,color:'#229944',isCue:false},
+    {x:W*0.74,y:H/2-32,dx:0,dy:0,r:13,color:'#aa44cc',isCue:false},
+    {x:W*0.74,y:H/2+32,dx:0,dy:0,r:13,color:'#cc8800',isCue:false},
+  ];
+
+  canvas.ontouchmove=e=>{ e.preventDefault();
+    const r=canvas.getBoundingClientRect();
+    const cx=e.touches[0].clientX-r.left, cy=e.touches[0].clientY-r.top;
+    const cue=BL.balls[0];
+    BL.aimAngle=Math.atan2(cy-cue.y,cx-cue.x)+Math.PI;
+  };
+  canvas.onmousemove=e=>{
+    const r=canvas.getBoundingClientRect();
+    const cx=e.clientX-r.left, cy=e.clientY-r.top;
+    const cue=BL.balls[0];
+    BL.aimAngle=Math.atan2(cy-cue.y,cx-cue.x)+Math.PI;
+  };
+  canvas.onclick=()=>blShoot();
+
+  const step=()=>{
+    if(!BL.running||currentGame!=='billiard') return;
+    /* 조준 회전 */
+    if(BL.turning) BL.aimAngle+=BL.turning*0.04;
+    blUpdate(); blDraw();
+    rafId=requestAnimationFrame(step);
+  };
+  rafId=requestAnimationFrame(step);
+}
+
+function blShoot() {
+  if(!BL.running) return;
+  const pw=parseInt(document.getElementById('bl-power')?.value||7);
+  BL.balls[0].dx=Math.cos(BL.aimAngle)*pw;
+  BL.balls[0].dy=Math.sin(BL.aimAngle)*pw;
+  BL.shots++;
+}
+
+function blUpdate() {
+  const W=canvas.width,H=canvas.height,pad=20;
+  BL.balls.forEach(b=>{
+    b.x+=b.dx; b.y+=b.dy;
+    /* 마찰 */
+    b.dx*=0.985; b.dy*=0.985;
+    if(Math.abs(b.dx)<0.05) b.dx=0;
+    if(Math.abs(b.dy)<0.05) b.dy=0;
+    /* 벽 반사 */
+    if(b.x-b.r<pad){b.x=pad+b.r;b.dx=Math.abs(b.dx)*0.85;}
+    if(b.x+b.r>W-pad){b.x=W-pad-b.r;b.dx=-Math.abs(b.dx)*0.85;}
+    if(b.y-b.r<pad){b.y=pad+b.r;b.dy=Math.abs(b.dy)*0.85;}
+    if(b.y+b.r>H-pad){b.y=H-pad-b.r;b.dy=-Math.abs(b.dy)*0.85;}
+  });
+  /* 공 간 충돌 */
+  for(let i=0;i<BL.balls.length;i++) for(let j=i+1;j<BL.balls.length;j++) {
+    const a=BL.balls[i],b=BL.balls[j];
+    const dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy);
+    if(dist<a.r+b.r) {
+      const nx=dx/dist,ny=dy/dist,overlap=(a.r+b.r-dist)/2;
+      a.x-=nx*overlap; a.y-=ny*overlap; b.x+=nx*overlap; b.y+=ny*overlap;
+      const rv=(b.dx-a.dx)*nx+(b.dy-a.dy)*ny;
+      if(rv<0) {
+        a.dx+=rv*nx*0.8; a.dy+=rv*ny*0.8;
+        b.dx-=rv*nx*0.8; b.dy-=rv*ny*0.8;
+        if(a.isCue||b.isCue){ BL.score++; setGameUI('당구',BL.score,'#00e5ff'); flashFX('#00e5ff'); }
+      }
+    }
+  }
+}
+
+function blDraw() {
+  const W=canvas.width,H=canvas.height,pad=20;
+  /* 테이블 */
+  ctx.fillStyle='#1a5a2a'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#228833'; ctx.fillRect(pad,pad,W-pad*2,H-pad*2);
+  /* 쿠션 */
+  ctx.fillStyle='#3a1a0a';
+  ctx.fillRect(0,0,W,pad); ctx.fillRect(0,H-pad,W,pad);
+  ctx.fillRect(0,0,pad,H); ctx.fillRect(W-pad,0,pad,H);
+  /* 중앙선 */
+  ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=1; ctx.setLineDash([5,5]);
+  ctx.beginPath(); ctx.moveTo(W/2,pad); ctx.lineTo(W/2,H-pad); ctx.stroke();
+  ctx.setLineDash([]);
+  /* 조준선 */
+  const cue=BL.balls[0];
+  const allStop=BL.balls.every(b=>b.dx===0&&b.dy===0);
+  if(allStop){
+    ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.lineWidth=1.5; ctx.setLineDash([6,4]);
+    ctx.beginPath();
+    ctx.moveTo(cue.x,cue.y);
+    ctx.lineTo(cue.x+Math.cos(BL.aimAngle)*120,cue.y+Math.sin(BL.aimAngle)*120);
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  /* 공 */
+  BL.balls.forEach(b=>{
+    ctx.fillStyle=b.color; ctx.shadowBlur=8; ctx.shadowColor=b.color;
+    ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
+    /* 하이라이트 */
+    ctx.fillStyle='rgba(255,255,255,0.35)';
+    ctx.beginPath(); ctx.arc(b.x-b.r*0.3,b.y-b.r*0.3,b.r*0.35,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+  });
+  /* 샷 횟수 */
+  ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='11px Black Ops One'; ctx.textAlign='left';
+  ctx.fillText('SHOTS: '+BL.shots, pad+4, pad+16);
+}
+
+/* ============================================================
+   6. 볼링
+   ============================================================ */
+const BW = {
+  ball:{x:0,y:0,r:18,dx:0,dy:0,rolling:false},
+  pins:[], angle:0, power:50,
+  score:0, frame:1, knocked:0, running:false, phase:'aim'
+};
+
+function initBowling() {
+  setGameUI('볼링', 0, '#cc44ff');
+  document.getElementById('ctrl-pad').innerHTML=`
+    <div class="action-row">
+      <button class="act-btn act-blue" ontouchstart="BW.rotating=-1" ontouchend="BW.rotating=0" onmousedown="BW.rotating=-1" onmouseup="BW.rotating=0">◀ 방향</button>
+      <button class="act-btn act-red act-wide" onclick="bwShoot()">🎳 던지기!</button>
+      <button class="act-btn act-blue" ontouchstart="BW.rotating=1"  ontouchend="BW.rotating=0" onmousedown="BW.rotating=1"  onmouseup="BW.rotating=0">방향 ▶</button>
+    </div>
+    <div style="padding:0 12px 8px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:11px;color:var(--dim)">파워</span>
+      <input type="range" id="bw-power" min="3" max="12" value="7" style="flex:1;height:28px;accent-color:#cc44ff">
+    </div>`;
+  resizeCanvas();
+  BW.rotating=0; BW.score=0; BW.frame=1; BW.running=true;
+  bwReset();
+
+  const step=()=>{
+    if(!BW.running||currentGame!=='bowling') return;
+    if(BW.rotating) { BW.angle+=BW.rotating*1.5; BW.angle=Math.max(-40,Math.min(40,BW.angle)); }
+    if(BW.phase==='rolling') bwUpdate();
+    bwDraw();
+    rafId=requestAnimationFrame(step);
+  };
+  rafId=requestAnimationFrame(step);
+}
+
+function bwReset() {
+  const W=canvas.width, H=canvas.height;
+  BW.ball={x:W/2,y:H-50,r:16,dx:0,dy:0,rolling:false};
+  BW.angle=0; BW.phase='aim'; BW.knocked=0;
+  /* 10개 핀 삼각형 배치 */
+  BW.pins=[];
+  const pinR=10, startX=W/2, startY=100, spacingX=28, spacingY=26;
+  [[1],[2,3],[4,5,6],[7,8,9,10]].forEach((row,ri)=>{
+    row.forEach((n,ci)=>{
+      BW.pins.push({
+        x: startX+(ci-(row.length-1)/2)*spacingX,
+        y: startY+ri*spacingY,
+        r:pinR, alive:true, id:n
+      });
+    });
+  });
+}
+
+function bwShoot() {
+  if(!BW.running||BW.phase!=='aim') return;
+  const pw=parseInt(document.getElementById('bw-power')?.value||7);
+  const rad=BW.angle*Math.PI/180;
+  BW.ball.dx=Math.sin(rad)*pw;
+  BW.ball.dy=-Math.cos(rad)*pw*(0.7+pw*0.03);
+  BW.phase='rolling';
+}
+
+function bwUpdate() {
+  const W=canvas.width,H=canvas.height,b=BW.ball;
+  b.x+=b.dx; b.y+=b.dy;
+  /* 레인 벽 */
+  const laneW=Math.min(W*0.7,280);
+  const lx=(W-laneW)/2;
+  if(b.x-b.r<lx){b.x=lx+b.r;b.dx=Math.abs(b.dx)*0.6;}
+  if(b.x+b.r>lx+laneW){b.x=lx+laneW-b.r;b.dx=-Math.abs(b.dx)*0.6;}
+  /* 핀 충돌 */
+  BW.pins.forEach(p=>{
+    if(!p.alive) return;
+    const dist=Math.hypot(b.x-p.x,b.y-p.y);
+    if(dist<b.r+p.r){
+      p.alive=false; BW.knocked++;
+      b.dx+=(b.x-p.x)*0.3; /* 반사 */
+      BW.score+=10; setGameUI('볼링',BW.score,'#cc44ff');
+      flashFX('#cc44ff');
+      floatText('+10',p.x,p.y,'#cc44ff');
+    }
+  });
+  /* 화면 밖 or 정지 */
+  b.dy+=0.08; /* 중력 없앰 – 직선 */
+  if(b.y<-30||b.y>H+30) {
+    const knocked=BW.knocked;
+    const isStrike=knocked===10;
+    BW.frame++;
+    if(BW.frame>10||isStrike){
+      BW.running=false;
+      showOverlay(isStrike?'STRIKE! 🎳':'볼링 종료',
+        isStrike?'퍼펙트!':`${knocked}개 쓰러뜨림`,
+        [['점수',BW.score,'#ffd700'],['쓰러진 핀',knocked+'/10','#cc44ff'],['프레임',BW.frame-1,'#00ff88']],
+        isStrike?'#cc44ff':'var(--text)');
+    } else {
+      setTimeout(()=>{ bwReset(); flashFX('#ffffff'); },600);
+    }
+  }
+}
+
+function bwDraw() {
+  const W=canvas.width,H=canvas.height,b=BW.ball;
+  const laneW=Math.min(W*0.7,280), lx=(W-laneW)/2;
+  /* 배경 */
+  ctx.fillStyle='#1a1010'; ctx.fillRect(0,0,W,H);
+  /* 레인 */
+  ctx.fillStyle='#c8a060';
+  ctx.beginPath(); ctx.roundRect(lx,0,laneW,H,0); ctx.fill();
+  /* 레인 선 */
+  ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=2;
+  for(let i=1;i<6;i++){
+    ctx.beginPath(); ctx.moveTo(lx+laneW*i/6,H*0.6); ctx.lineTo(lx+laneW*i/6,H); ctx.stroke();
+  }
+  /* 가터 */
+  ctx.fillStyle='#8a6030';
+  ctx.fillRect(lx-16,0,16,H); ctx.fillRect(lx+laneW,0,16,H);
+  /* 조준선 (aim 단계) */
+  if(BW.phase==='aim'){
+    ctx.strokeStyle='rgba(204,68,255,0.5)'; ctx.lineWidth=2; ctx.setLineDash([8,6]);
+    const rad=BW.angle*Math.PI/180;
+    ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.x+Math.sin(rad)*200,b.y-Math.cos(rad)*200);
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  /* 핀 */
+  BW.pins.forEach(p=>{
+    if(!p.alive) return;
+    ctx.fillStyle='#f0f0f0'; ctx.shadowBlur=4; ctx.shadowColor='rgba(255,255,255,0.5)';
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#cc2244';
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r*0.5,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+  });
+  /* 공 */
+  ctx.fillStyle='#2244cc'; ctx.shadowBlur=12; ctx.shadowColor='#4466ff';
+  ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.3)';
+  ctx.beginPath(); ctx.arc(b.x-5,b.y-5,b.r*0.35,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+  /* 프레임/각도 */
+  ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='12px Black Ops One'; ctx.textAlign='left';
+  ctx.fillText(`FRAME ${BW.frame}/10`, lx+6, 20);
+  ctx.textAlign='right';
+  ctx.fillText(`각도: ${Math.round(BW.angle)}°`, lx+laneW-6, 20);
+}
+
+/* ============================================================
+   7. 탱크 배틀 (Battle City 스타일)
+   ============================================================ */
+const TK = {
+  MAP_W:15, MAP_H:13, CELL:0,
+  map:[], player:{}, enemies:[], bullets:[],
+  score:0, stage:1, lives:3, running:false,
+  WALL:1, BRICK:2, EMPTY:0
+};
+
+/* 스테이지 맵 (0=빈,1=철벽,2=벽돌) */
+const STAGE_MAPS = [
+  [
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,0,2,0,0,0,2,0,0,0,0,1],
+    [1,0,2,2,0,0,0,2,0,0,0,2,2,0,1],
+    [1,0,2,0,0,2,0,0,0,2,0,0,2,0,1],
+    [1,0,0,0,2,2,0,0,0,2,2,0,0,0,1],
+    [1,2,0,0,0,0,0,2,0,0,0,0,0,2,1],
+    [1,0,0,2,0,0,0,0,0,0,0,2,0,0,1],
+    [1,2,0,0,0,0,0,2,0,0,0,0,0,2,1],
+    [1,0,0,0,2,2,0,0,0,2,2,0,0,0,1],
+    [1,0,2,0,0,2,0,0,0,2,0,0,2,0,1],
+    [1,0,2,2,0,0,0,2,0,0,0,2,2,0,1],
+    [1,0,0,0,0,2,0,0,0,2,0,0,0,0,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]
+];
+
+function initTank() {
+  setGameUI('탱크 배틀', 0, '#aaff00');
+  document.getElementById('ctrl-pad').innerHTML=`
+    <div style="display:flex;align-items:center;padding:6px 10px;gap:10px">
+      <div class="dpad-wrap" style="width:144px;height:144px;gap:4px">
+        <div></div>
+        <button class="dpad-btn" ontouchstart="tkDir(0,-1)" onclick="tkDir(0,-1)">▲</button>
+        <div></div>
+        <button class="dpad-btn" ontouchstart="tkDir(-1,0)" onclick="tkDir(-1,0)">◀</button>
+        <div></div>
+        <button class="dpad-btn" ontouchstart="tkDir(1,0)"  onclick="tkDir(1,0)">▶</button>
+        <div></div>
+        <button class="dpad-btn" ontouchstart="tkDir(0,1)"  onclick="tkDir(0,1)">▼</button>
+        <div></div>
+      </div>
+      <button class="act-btn act-red" style="height:90px;flex:1;font-size:28px" ontouchstart="tkFire()" onclick="tkFire()">🔥</button>
+    </div>`;
+  resizeCanvas();
+
+  TK.CELL=Math.floor(Math.min(canvas.width/TK.MAP_W, canvas.height/TK.MAP_H));
+  TK.map=STAGE_MAPS[0].map(r=>[...r]);
+  TK.score=0; TK.stage=1; TK.lives=3; TK.running=true;
+  TK.bullets=[];
+
+  /* 플레이어 초기 위치 */
+  TK.player={x:1,y:1,dx:0,dy:1,hp:3,fireCD:0,color:'#aaff00',isCue:true};
+
+  /* 적 탱크 (스테이지 1: 3대) */
+  TK.enemies=[
+    {x:13,y:1,dx:0,dy:1,hp:1,fireCD:0,moveCD:0,color:'#ff4422'},
+    {x:7, y:1,dx:1,dy:0,hp:1,fireCD:0,moveCD:0,color:'#ff6600'},
+    {x:13,y:11,dx:0,dy:-1,hp:1,fireCD:0,moveCD:0,color:'#ff2244'},
+  ];
+
+  document.onkeydown=e=>{
+    if(currentGame!=='tank') return;
+    if(e.key==='ArrowLeft')  tkDir(-1,0);
+    if(e.key==='ArrowRight') tkDir(1,0);
+    if(e.key==='ArrowUp')    tkDir(0,-1);
+    if(e.key==='ArrowDown')  tkDir(0,1);
+    if(e.key===' ') tkFire();
+  };
+
+  let last=0;
+  const step=ts=>{
+    if(!TK.running||currentGame!=='tank') return;
+    const dt=ts-last; last=ts;
+    tkUpdate(dt);
+    tkDraw();
+    rafId=requestAnimationFrame(step);
+  };
+  rafId=requestAnimationFrame(step);
+}
+
+function tkDir(dx,dy) {
+  if(!TK.running) return;
+  const p=TK.player;
+  p.dx=dx; p.dy=dy;
+  /* 이동 (CELL 단위) */
+  const nx=p.x+dx, ny=p.y+dy;
+  if(nx>=0&&nx<TK.MAP_W&&ny>=0&&ny<TK.MAP_H&&TK.map[ny][nx]===TK.EMPTY) {
+    p.x=nx; p.y=ny;
+  }
+}
+
+function tkFire() {
+  if(!TK.running) return;
+  const p=TK.player;
+  if(p.fireCD>0) return;
+  TK.bullets.push({x:p.x+0.5,y:p.y+0.5,dx:p.dx,dy:p.dy,speed:8,owner:'player',color:'#ffff00'});
+  p.fireCD=20;
+  flashFX('#ffff00');
+}
+
+function tkUpdate(dt) {
+  const p=TK.player;
+  if(p.fireCD>0) p.fireCD--;
+
+  /* 적 AI */
+  TK.enemies.forEach(e=>{
+    if(e.moveCD>0){e.moveCD--;return;}
+    e.moveCD=30+Math.random()*40;
+    /* 랜덤 방향 or 플레이어 추적 */
+    const dirs=[[0,1],[0,-1],[1,0],[-1,0]];
+    /* 50% 플레이어 방향 */
+    if(Math.random()<0.5){
+      const ddx=p.x-e.x, ddy=p.y-e.y;
+      e.dx=ddx!==0?Math.sign(ddx):0; e.dy=ddx!==0?0:Math.sign(ddy);
+    } else {
+      const d=dirs[Math.floor(Math.random()*4)]; e.dx=d[0]; e.dy=d[1];
+    }
+    const nx=e.x+e.dx, ny=e.y+e.dy;
+    if(nx>0&&nx<TK.MAP_W-1&&ny>0&&ny<TK.MAP_H-1&&TK.map[ny][nx]===TK.EMPTY) { e.x=nx; e.y=ny; }
+    /* 적 발사 */
+    if(e.fireCD<=0&&Math.random()<0.08){
+      TK.bullets.push({x:e.x+0.5,y:e.y+0.5,dx:e.dx,dy:e.dy,speed:5,owner:'enemy',color:'#ff4422'});
+      e.fireCD=40;
+    }
+    if(e.fireCD>0) e.fireCD--;
+  });
+
+  /* 총알 이동 */
+  const C=TK.CELL;
+  TK.bullets=TK.bullets.filter(b=>{
+    b.x+=b.dx*b.speed/C; b.y+=b.dy*b.speed/C;
+    /* 벽 충돌 */
+    const mx=Math.floor(b.x), my=Math.floor(b.y);
+    if(mx<0||mx>=TK.MAP_W||my<0||my>=TK.MAP_H) return false;
+    if(TK.map[my][mx]===TK.WALL) return false;
+    if(TK.map[my][mx]===TK.BRICK){ TK.map[my][mx]=TK.EMPTY; return false; }
+    /* 플레이어 피격 */
+    if(b.owner==='enemy'&&Math.abs(b.x-p.x-0.5)<0.8&&Math.abs(b.y-p.y-0.5)<0.8){
+      p.hp--; shakeFX(); flashFX('#ff2244');
+      if(p.hp<=0){ TK.lives--; if(TK.lives<=0){ tkGameOver(); } else { p.x=1;p.y=1;p.hp=3; } }
+      return false;
+    }
+    /* 적 피격 */
+    let hit=false;
+    TK.enemies=TK.enemies.filter(e=>{
+      if(!hit&&b.owner==='player'&&Math.abs(b.x-e.x-0.5)<0.9&&Math.abs(b.y-e.y-0.5)<0.9){
+        e.hp--; hit=true; flashFX('#ffaa00');
+        if(e.hp<=0){ TK.score+=100; setGameUI('탱크 배틀',TK.score,'#aaff00');
+          floatText('+100',e.x*C,e.y*C,'#ffd700'); return false; }
+      } return true;
+    });
+    if(hit) return false;
+    return true;
+  });
+
+  /* 스테이지 클리어 */
+  if(TK.enemies.length===0){
+    TK.running=false;
+    showOverlay('STAGE CLEAR!','모든 적 탱크 격파!',
+      [['점수',TK.score,'#ffd700'],['스테이지',TK.stage,'#aaff00'],['남은 목숨',TK.lives,'#00ff88']],'#aaff00');
+  }
+}
+
+function tkGameOver() {
+  TK.running=false;
+  saveScore('tank',TK.score);
+  showOverlay('GAME OVER','탱크가 파괴됐습니다',
+    [['점수',TK.score,'#ffd700'],['스테이지',TK.stage,'#aaff00']]);
+}
+
+function tkDraw() {
+  const C=TK.CELL,W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#111118'; ctx.fillRect(0,0,W,H);
+
+  /* 맵 */
+  TK.map.forEach((row,r)=>row.forEach((cell,c)=>{
+    const x=c*C,y=r*C;
+    if(cell===TK.WALL){
+      ctx.fillStyle='#446688'; ctx.fillRect(x,y,C,C);
+      ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.fillRect(x,y,C,3);
+    } else if(cell===TK.BRICK){
+      ctx.fillStyle='#884422'; ctx.fillRect(x,y,C,C);
+      ctx.strokeStyle='#662200'; ctx.lineWidth=1;
+      ctx.strokeRect(x+1,y+1,C-2,C-2);
+      /* 벽돌 패턴 */
+      ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=0.5;
+      ctx.beginPath(); ctx.moveTo(x,y+C/2); ctx.lineTo(x+C,y+C/2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x+C/2,y); ctx.lineTo(x+C/2,y+C/2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x+C/4,y+C/2); ctx.lineTo(x+C/4,y+C); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x+C*3/4,y+C/2); ctx.lineTo(x+C*3/4,y+C); ctx.stroke();
+    }
+  }));
+
+  /* 플레이어 탱크 */
+  tkDrawTank(TK.player,'#aaff00');
+
+  /* 적 탱크 */
+  TK.enemies.forEach(e=>tkDrawTank(e,e.color));
+
+  /* 총알 */
+  TK.bullets.forEach(b=>{
+    ctx.fillStyle=b.color; ctx.shadowBlur=8; ctx.shadowColor=b.color;
+    ctx.beginPath(); ctx.arc(b.x*C,b.y*C,4,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+  });
+
+  /* HUD */
+  ctx.fillStyle='rgba(170,255,0,0.8)'; ctx.font='12px Black Ops One'; ctx.textAlign='right';
+  ctx.fillText('❤'.repeat(TK.lives), W-8, 22);
+  ctx.fillStyle='rgba(255,200,0,0.8)'; ctx.textAlign='left';
+  ctx.fillText('적: '+TK.enemies.length, 8, 22);
+}
+
+function tkDrawTank(t,color) {
+  const C=TK.CELL, x=t.x*C, y=t.y*C;
+  /* 차체 */
+  ctx.fillStyle=color; ctx.shadowBlur=6; ctx.shadowColor=color;
+  ctx.fillRect(x+2,y+2,C-4,C-4);
+  /* 포신 */
+  ctx.strokeStyle=color; ctx.lineWidth=3; ctx.lineCap='round';
+  const cx=x+C/2, cy=y+C/2, len=C*0.6;
+  ctx.beginPath();
+  ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+t.dx*len, cy+t.dy*len);
+  ctx.stroke();
+  /* 해치 */
+  ctx.fillStyle='rgba(0,0,0,0.4)';
+  ctx.beginPath(); ctx.arc(cx,cy,C*0.2,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+}
+
+/* ============================================================
+   앱 초기화
+   ============================================================ */
+window.addEventListener('resize', ()=>{ if(currentGame) resizeCanvas(); });
+</script>
+</body>
+</html>
